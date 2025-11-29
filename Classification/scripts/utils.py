@@ -1,7 +1,50 @@
 import cv2
 import math
 import numpy as np
+from scipy import stats
 
+def calculate_ttest_pvalues(df, group_col='Group', condition_col='Condition', value_col='Value'):
+    """
+    计算各组间的t检验p值
+    
+    参数:
+        df: 包含数据的DataFrame
+        group_col: 分组列名 (如'H3K27ac'和'CTCF')
+        condition_col: 条件列名 (如'CTRL'和'VPA')
+        value_col: 数值列名
+    
+    返回:
+        包含p值的DataFrame
+    """
+    # 获取唯一的分组和条件
+    groups = df[group_col].unique()
+    conditions = df[condition_col].unique()
+    
+    # 存储结果的列表
+    results = []
+    
+    # 对每个分组进行组内条件比较
+    for group in groups:
+        group_data = df[df[group_col] == group]
+        
+        # 提取各条件的数据
+        data = [group_data[group_data[condition_col] == cond][value_col] 
+                for cond in conditions]
+        
+        # 执行独立样本t检验
+        t_stat, p_val = stats.ttest_ind(*data)
+        
+        # 将结果添加到列表
+        results.append({
+            'Group': group,
+            'Comparison': f"{conditions[0]} vs {conditions[1]}",
+            't-statistic': t_stat,
+            'p-value': p_val
+        })
+    
+    # 转换为DataFrame
+    return pd.DataFrame(results)
+    
 def ellipse(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     thresh = cv2.threshold(gray, 0 , 255, cv2.THRESH_BINARY)[1]
